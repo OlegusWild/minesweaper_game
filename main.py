@@ -13,6 +13,7 @@ class Cell(tk.Button):
         self.y = y
         self.order_number = order_number
         self.is_mine = False
+        self.bombs_around = 0
 
     def __str__(self) -> str:
         return f"Button {self.order_number} ({self.x}, {self.y})"
@@ -48,12 +49,13 @@ class MineSweeper:
                 if btn.is_mine:
                     btn.config(text='*', background='red')
                 else:
-                    btn.config(text=str(btn.order_number))
+                    btn.config(text=str(btn.bombs_around))
                 btn.config(state=tk.DISABLED, disabledforeground='black')
 
     def start(self):
         self.create_field()
         self.insert_mines()
+        self.count_mines_for_cell()
 
         self.show_field()
 
@@ -78,11 +80,25 @@ class MineSweeper:
                     btn.order_number = counter
                 counter += 1
     
+    def count_mines_for_cell(self):
+        for row in range(1, self.ROWS + 1):
+            for col in range(1, self.COLS + 1):
+                btn = self.buttons[row][col]
+                if not btn.is_mine:
+                    bombs_count = 0
+                    for row_dx in (-1, 0, 1):
+                        for col_dx in (-1, 0, 1):
+                            neighbour = self.buttons[row + row_dx][col + col_dx]
+                            if neighbour.is_mine:
+                                bombs_count += 1
+                    btn.bombs_around = bombs_count
+
+    
     def click_cell(self, cell_clicked: Cell):
         if cell_clicked.is_mine:
             cell_clicked.config(text='*', background='red')
         else:
-            cell_clicked.config(text=str(cell_clicked.order_number))
+            cell_clicked.config(text=str(cell_clicked.bombs_around))
         cell_clicked.config(state=tk.DISABLED, disabledforeground='black')
         
 
