@@ -32,7 +32,9 @@ class MineSweeper:
         for row in range(MineSweeper.ROWS):
             buttons_row = []
             for col in range(MineSweeper.COLS):
-                buttons_row.append(Cell(MineSweeper.window, row, col, counter))
+                cell = Cell(MineSweeper.window, row, col, counter)
+                cell.config(command=lambda btn = cell: self.click_cell(btn))
+                buttons_row.append(cell)
                 counter += 1
             self.buttons.append(buttons_row)
 
@@ -45,10 +47,10 @@ class MineSweeper:
         self.create_field()
         self.insert_mines()
 
-        for row in self.buttons:
-            for btn in row:
-                if btn.is_mine:
-                    print(btn)
+        # for row in self.buttons:
+        #     for btn in row:
+        #         if btn.is_mine:
+        #             print(btn)
 
         MineSweeper.window.mainloop()
     
@@ -64,7 +66,14 @@ class MineSweeper:
             for btn in row:
                 if btn.order_number in mines_numbers:
                     btn.is_mine = True
-
+    
+    def click_cell(self, cell_clicked: Cell):
+        if cell_clicked.is_mine:
+            cell_clicked.config(text='*', background='red')
+        else:
+            cell_clicked.config(text=str(cell_clicked.order_number))
+        cell_clicked.config(state=tk.DISABLED, disabledforeground='black')
+        
 
 game = MineSweeper()
 game.start()
