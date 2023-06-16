@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import messagebox
 
 from random import shuffle
 
@@ -16,25 +17,30 @@ COLORS = {
 
 
 class Cell(tk.Button):
-    def __init__(self, master, x, y, order_number=0, *args, **kwargs) -> None:
+    def __init__(self, master, row, col, order_number=0, *args, **kwargs) -> None:
         super(Cell, self).__init__(
             master, *args, 
             width=5, height=2, font="Calibri 15 bold", **kwargs
         )
-        self.x = x
-        self.y = y
+        self.row = row
+        self.col = col
+
         self.order_number = order_number
+
         self.is_mine = False
         self.bombs_around = 0
 
+        self.is_clicked = False
+
+
     def __str__(self) -> str:
-        return f"Button {self.order_number} ({self.x}, {self.y})"
+        return f"Button {self.order_number} ({self.row}, {self.col})"
 
 
 class MineSweeper:
     # game settings
     ROWS, COLS = 10, 7
-    MINES = 15
+    MINES = 69
 
     window = tk.Tk()
 
@@ -49,20 +55,28 @@ class MineSweeper:
                 cell.config(command=lambda btn = cell: self.click_cell(btn))
                 buttons_row.append(cell)
             self.buttons.append(buttons_row)
+        
+        self.IS_GAMEOVER = False
+        self.IS_FIRST_CLICK = True
 
     def create_field(self):
+        counter = 1
         for row in range(1, MineSweeper.ROWS+1):
             for col in range(1, MineSweeper.COLS+1):
-                self.buttons[row][col].grid(row=row-1, column=col-1)
+                btn = self.buttons[row][col]
+                btn.order_number = counter
+                btn.grid(row=row-1, column=col-1)
 
-    def show_field(self):
+                counter += 1
+
+    def _show_bombs(self):
         for btn_row in self.buttons:
             for btn in btn_row:
+                kwargs = {}
                 if btn.is_mine:
-                    btn.config(text='*', background='red')
-                else:
-                    btn.config(text=str(btn.bombs_around))
-                btn.config(state=tk.DISABLED, disabledforeground='black')
+                    btn.config(text='*')
+                    kwargs = {'disabledforeground': 'black'}
+                btn.config(state=tk.DISABLED, relief=tk.SUNKEN, **kwargs)
     
     def print_field_schema(self):
         for row in range(1, MineSweeper.ROWS+1):
@@ -76,32 +90,24 @@ class MineSweeper:
 
     def start(self):
         self.create_field()
-        self.insert_mines()
-        self.count_mines_for_cell()
-
-        # self.show_field()
-        self.print_field_schema()
 
         MineSweeper.window.mainloop()
     
     @staticmethod
-    def _get_mines_places():
+    def _get_mines_places(exclude_cell_number: int):
         cell_numbers = [i for i in range(1, MineSweeper.ROWS * MineSweeper.COLS + 1)]
+        cell_numbers.remove(exclude_cell_number)
         shuffle(cell_numbers)
         return cell_numbers[:MineSweeper.MINES]
     
-    def insert_mines(self):
-        mines_numbers = MineSweeper._get_mines_places()
+    def insert_mines(self, exclude_cell_number: int):
+        mines_numbers = MineSweeper._get_mines_places(exclude_cell_number)
 
-        counter = 1
         for row in range(1, self.ROWS + 1):
             for col in range(1, self.COLS + 1):
                 btn = self.buttons[row][col]
-                if counter in mines_numbers:
+                if btn.order_number in mines_numbers:
                     btn.is_mine = True
-                else:
-                    btn.order_number = counter
-                counter += 1
     
     def count_mines_for_cell(self):
         for row in range(1, self.ROWS + 1):
@@ -118,13 +124,56 @@ class MineSweeper:
 
     
     def click_cell(self, cell_clicked: Cell):
+        def _is_in_range(row, col):
+            return 1 <= row < self.ROWS + 1 and 1 <= col <= self.COLS + 1
+        
+        # this is when we place our mines - user never hit one when click first
+        if self.IS_FIRST_CLICK:
+            self.insert_mines(cell_clicked.order_number)
+            self.count_mines_for_cell()
+
+            # DEBUG
+            self.print_field_schema()
+
+            self.IS_FIRST_CLICK = False
+        
         if cell_clicked.is_mine:
             cell_clicked.config(text='*', background='red')
+            messagebox.showinfo('Game Over', 'You are banged!')
+            self.IS_GAMEOVER = True
+            self._show_bombs()
         else:
-            if cell_clicked.bombs_around:
-                cell_clicked.config(text=str(cell_clicked.bombs_around))
-        cell_clicked.config(state=tk.DISABLED, disabledforeground=COLORS.get(cell_clicked.bombs_around) or 'black')
-        
+            cells_to_open = [cell_clicked]
+            while cells_to_open:
+                cell = cells_to_open.pop()
+                if cell.bombs_around:
+                    cell.config(text=str(cell.bombs_around))
+                else:
+                    # left
+                    if _is_in_range(cell.row, cell.col-1):
+                        btn = self.buttons[cell.row][cell.col-1]
+                        if btn.is_mine is False and btn.is_clicked is False:
+                            cells_to_open.append(btn)
+                    # right
+                    if _is_in_range(cell.row, cell.col+1):
+                        btn = self.buttons[cell.row][cell.col+1]
+                        if btn.is_mine is False and btn.is_clicked is False:
+                            cells_to_open.append(btn)
+                    # down
+                    if _is_in_range(cell.row+1, cell.col):
+                        btn = self.buttons[cell.row+1][cell.col]
+                        if btn.is_mine is False and btn.is_clicked is False:
+                            cells_to_open.append(btn)
+                    # up
+                    if _is_in_range(cell.row-1, cell.col):
+                        btn = self.buttons[cell.row-1][cell.col]
+                        if btn.is_mine is False and btn.is_clicked is False:
+                            cells_to_open.append(btn)
+                    
+                    cell.is_clicked = True
+                        
+                cell.config(state=tk.DISABLED, background='#b5b3b3', disabledforeground=COLORS.get(cell.bombs_around) or 'black', relief=tk.SUNKEN)
 
+        
 game = MineSweeper()
 game.start()
