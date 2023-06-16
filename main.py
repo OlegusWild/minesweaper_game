@@ -2,6 +2,18 @@ import tkinter as tk
 
 from random import shuffle
 
+COLORS = {
+    1: '#0f67d9',
+    2: '#07f007',
+    3: '#0b4507',
+    4: '#0f07f0',
+    5: '#810fd9',
+    6: '#a602cf',
+    7: '#cf0246',
+    8: '#cf0217',
+
+}
+
 
 class Cell(tk.Button):
     def __init__(self, master, x, y, order_number=0, *args, **kwargs) -> None:
@@ -51,13 +63,24 @@ class MineSweeper:
                 else:
                     btn.config(text=str(btn.bombs_around))
                 btn.config(state=tk.DISABLED, disabledforeground='black')
+    
+    def print_field_schema(self):
+        for row in range(1, MineSweeper.ROWS+1):
+            for col in range(1, MineSweeper.COLS+1):
+                btn = self.buttons[row][col]
+                if btn.is_mine:
+                    print('*', end='')
+                else:
+                    print(btn.bombs_around, end='')
+            print()
 
     def start(self):
         self.create_field()
         self.insert_mines()
         self.count_mines_for_cell()
 
-        self.show_field()
+        # self.show_field()
+        self.print_field_schema()
 
         MineSweeper.window.mainloop()
     
@@ -98,8 +121,9 @@ class MineSweeper:
         if cell_clicked.is_mine:
             cell_clicked.config(text='*', background='red')
         else:
-            cell_clicked.config(text=str(cell_clicked.bombs_around))
-        cell_clicked.config(state=tk.DISABLED, disabledforeground='black')
+            if cell_clicked.bombs_around:
+                cell_clicked.config(text=str(cell_clicked.bombs_around))
+        cell_clicked.config(state=tk.DISABLED, disabledforeground=COLORS.get(cell_clicked.bombs_around) or 'black')
         
 
 game = MineSweeper()
