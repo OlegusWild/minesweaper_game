@@ -40,7 +40,7 @@ class Cell(tk.Button):
 class MineSweeper:
     # game settings
     ROWS, COLS = 10, 7
-    MINES = 69
+    MINES = 5
 
     window = tk.Tk()
 
@@ -60,14 +60,30 @@ class MineSweeper:
         self.IS_FIRST_CLICK = True
 
     def create_field(self):
+        menubar = tk.Menu(self.window)
+        self.window.config(menu=menubar)
+
+        cascade_menu = tk.Menu(menubar, 
+                               tearoff=0)  # disables tearing off the menu to a separate window
+        cascade_menu.add_command(label='Перезапустить игру', command=self.reload)
+        cascade_menu.add_command(label='Настройки', command=self.create_settings_win)
+        cascade_menu.add_command(label='Выход', command=self.window.destroy)
+
+        menubar.add_cascade(menu=cascade_menu, label='Меню')
+
         counter = 1
         for row in range(1, MineSweeper.ROWS+1):
             for col in range(1, MineSweeper.COLS+1):
                 btn = self.buttons[row][col]
                 btn.order_number = counter
-                btn.grid(row=row-1, column=col-1)
+                btn.grid(row=row, column=col, stick='wesn')
 
                 counter += 1
+        
+        for row in range(1, MineSweeper.ROWS+1):
+            tk.Grid.rowconfigure(self.window, row, weight=1)
+        for col in range(1, MineSweeper.COLS+1):
+            tk.Grid.columnconfigure(self.window, col, weight=1)
 
     def _show_bombs(self):
         for btn_row in self.buttons:
@@ -92,7 +108,76 @@ class MineSweeper:
         self.create_field()
 
         MineSweeper.window.mainloop()
+
+    def reload(self):
+        # Очищаем клетки
+        for child in self.window.winfo_children():
+            child.destroy()
+
+        MineSweeper.__init__(self)
+        self.create_field()
+
+        self.IS_FIRST_CLICK = True
+        self.IS_GAMEOVER = False
     
+    def create_settings_win(self):
+        settings_win = tk.Toplevel(self.window)
+        settings_win.wm_title('Настройки')
+
+        tk.Label(settings_win, text='Количество строк: ').grid(row=0, column=0)
+        tk.Label(settings_win, text='Количество столбцов: ').grid(row=1, column=0)
+        tk.Label(settings_win, text='Количество мин: ').grid(row=2, column=0)
+
+        rows_entry = tk.Entry(settings_win)
+        rows_entry.grid(row=0, column=1, padx=20, pady=20)
+        rows_entry.insert(0, MineSweeper.ROWS)
+
+        cols_entry = tk.Entry(settings_win)
+        cols_entry.grid(row=1, column=1, padx=20, pady=20)
+        cols_entry.insert(0, MineSweeper.COLS)
+
+        mines_entry = tk.Entry(settings_win)
+        mines_entry.grid(row=2, column=1, padx=20, pady=20)
+        mines_entry.insert(0, MineSweeper.MINES)
+
+        tk.Button(settings_win, 
+                  text='Сохранить', 
+                  command=lambda: self.change_settings(settings_win, rows_entry, cols_entry, mines_entry)).grid(row=3, 
+                                                                                                                column=0, 
+                                                                                                                columnspan=2,
+                                                                                                                pady=5)
+
+    def change_settings(self, settings_win, rows_entry, cols_entry, mines_entry):
+        try:
+            rows, cols, mines = int(rows_entry.get()), int(cols_entry.get()), int(mines_entry.get())
+        except ValueError:
+            messagebox.showerror("Ошибка ввода", "Допустимы только целые числа!")
+            return
+        
+        if not float(rows).is_integer() or not float(cols).is_integer() or not float(mines).is_integer():
+            messagebox.showerror("Ошибка ввода", "Допустимы только целые числа!")
+            return
+        
+        if cols <= 0 or rows <= 0 or mines <= 0:
+            messagebox.showerror("Ошибка ввода", 
+                                 f"Количество мин, строк и столбцов не могут равняться нулю или быть отрицательными!\n\
+                                 Вы ввели: мин={mines}, строк={rows}, столбцов={cols}")
+            return
+
+        if mines >= rows * cols:
+            messagebox.showerror("Ошибка ввода", 
+                                 f"Количество мин должно быть меньше количества клеток на поле!\n\
+                                 Вы ввели: мин={mines} >= кол-во клеток={cols * rows}")
+            return
+
+        MineSweeper.ROWS = rows
+        MineSweeper.COLS = cols
+        MineSweeper.MINES = mines
+
+        settings_win.destroy()
+
+        self.reload()
+
     @staticmethod
     def _get_mines_places(exclude_cell_number: int):
         cell_numbers = [i for i in range(1, MineSweeper.ROWS * MineSweeper.COLS + 1)]
@@ -172,7 +257,9 @@ class MineSweeper:
                     
                     cell.is_clicked = True
                         
-                cell.config(state=tk.DISABLED, background='#b5b3b3', disabledforeground=COLORS.get(cell.bombs_around) or 'black', relief=tk.SUNKEN)
+                cell.config(state=tk.DISABLED, 
+                            background='#b5b3b3', disabledforeground=COLORS.get(cell.bombs_around) or 'black', 
+                            relief=tk.SUNKEN)
 
         
 game = MineSweeper()
