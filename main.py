@@ -32,6 +32,8 @@ class Cell(tk.Button):
 
         self.is_clicked = False
 
+        self.has_flag = False
+
 
     def __str__(self) -> str:
         return f"Button {self.order_number} ({self.row}, {self.col})"
@@ -54,10 +56,27 @@ class MineSweeper:
                 cell = Cell(MineSweeper.window, row, col)
                 cell.config(command=lambda btn = cell: self.click_cell(btn))
                 buttons_row.append(cell)
+
+                cell.bind('<Button-3>', self.set_flag)
+
             self.buttons.append(buttons_row)
         
         self.IS_GAMEOVER = False
         self.IS_FIRST_CLICK = True
+    
+    def set_flag(self, event):
+        if self.IS_GAMEOVER:
+            return
+
+        button_clicked = event.widget
+
+        if button_clicked.has_flag:
+            button_clicked.config(state=tk.NORMAL, text='')
+            button_clicked.has_flag = False
+        elif button_clicked['state'] == tk.NORMAL:
+            button_clicked.config(state=tk.DISABLED, text='🚩',
+                                  disabledforeground='red')
+            button_clicked.has_flag = True
 
     def create_field(self):
         menubar = tk.Menu(self.window)
