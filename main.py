@@ -41,8 +41,8 @@ class Cell(tk.Button):
 
 class MineSweeper:
     # game settings
-    ROWS, COLS = 10, 7
-    MINES = 5
+    ROWS, COLS = 5, 7
+    MINES = 7
 
     window = tk.Tk()
 
@@ -63,6 +63,9 @@ class MineSweeper:
         
         self.IS_GAMEOVER = False
         self.IS_FIRST_CLICK = True
+
+        self.markers_left = self.MINES
+        self.real_mines_marked = 0
     
     def set_flag(self, event):
         if self.IS_GAMEOVER:
@@ -77,6 +80,16 @@ class MineSweeper:
             button_clicked.config(state=tk.DISABLED, text='🚩',
                                   disabledforeground='red')
             button_clicked.has_flag = True
+            self.markers_left -= 1
+            self.label_mines_unmarked['text'] = f'Мины: {self.markers_left}'
+
+            if button_clicked.is_mine:
+                self.real_mines_marked += 1
+        
+        # win msg
+        if self.real_mines_marked == self.MINES and\
+                all([(self.buttons[row][col].is_clicked or self.buttons[row][col].is_mine) for row in range(1, self.ROWS+1) for col in range(1, self.COLS+1)]):
+            messagebox.showinfo('Finish', f'You won in {self.label_time["text"][7:]} seconds!')
 
     def create_field(self):
         menubar = tk.Menu(self.window)
@@ -103,6 +116,24 @@ class MineSweeper:
             tk.Grid.rowconfigure(self.window, row, weight=1)
         for col in range(1, MineSweeper.COLS+1):
             tk.Grid.columnconfigure(self.window, col, weight=1)
+
+        self.label_mines_unmarked = tk.Label(self.window, text=f'Мины: {self.markers_left}', font='Times 15 bold')
+        self.label_mines_unmarked.grid(row=self.ROWS+1, 
+                                    column=self.COLS // 2 + 1,
+                                    columnspan=self.COLS // 2)
+
+        self.label_time = tk.Label(self.window, font='Times 15 bold')
+        self.label_time.grid(row=self.ROWS+1, column=self.COLS // 2 - 1, columnspan=self.COLS // 2)
+        counter = 0 
+        def counter_label(label):
+            def count():
+                nonlocal counter
+                counter += 1
+                label.config(text=f'Время: {counter}')
+                label.after(1000, count)
+            count()
+
+        counter_label(self.label_time)
 
     def _show_bombs(self):
         for btn_row in self.buttons:
@@ -231,6 +262,8 @@ class MineSweeper:
         def _is_in_range(row, col):
             return 1 <= row < self.ROWS + 1 and 1 <= col <= self.COLS + 1
         
+        cell_clicked.is_clicked = True
+
         # this is when we place our mines - user never hit one when click first
         if self.IS_FIRST_CLICK:
             self.insert_mines(cell_clicked.order_number)
@@ -274,11 +307,16 @@ class MineSweeper:
                         if btn.is_mine is False and btn.is_clicked is False:
                             cells_to_open.append(btn)
                     
-                    cell.is_clicked = True
+                cell.is_clicked = True
                         
                 cell.config(state=tk.DISABLED, 
                             background='#b5b3b3', disabledforeground=COLORS.get(cell.bombs_around) or 'black', 
                             relief=tk.SUNKEN)
+                
+        # win msg
+        if self.real_mines_marked == self.MINES and\
+            all([(self.buttons[row][col].is_clicked or self.buttons[row][col].is_mine) for row in range(1, self.ROWS+1) for col in range(1, self.COLS+1)]):
+            messagebox.showinfo('Finish', f'You won in {self.label_time["text"][7:]} seconds!')
 
         
 game = MineSweeper()
