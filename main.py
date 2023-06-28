@@ -42,7 +42,7 @@ class Cell(tk.Button):
 class MineSweeper:
     # game settings
     ROWS, COLS = 5, 7
-    MINES = 7
+    MINES = 4
 
     window = tk.Tk()
 
@@ -76,7 +76,13 @@ class MineSweeper:
         if button_clicked.has_flag:
             button_clicked.config(state=tk.NORMAL, text='')
             button_clicked.has_flag = False
-        elif button_clicked['state'] == tk.NORMAL:
+
+            self.markers_left += 1
+            self.label_mines_unmarked['text'] = f'Мины: {self.markers_left}'
+            if button_clicked.is_mine:
+                self.real_mines_marked -= 1
+        
+        elif button_clicked['state'] == tk.NORMAL and self.markers_left > 0:
             button_clicked.config(state=tk.DISABLED, text='🚩',
                                   disabledforeground='red')
             button_clicked.has_flag = True
@@ -89,7 +95,10 @@ class MineSweeper:
         # win msg
         if self.real_mines_marked == self.MINES and\
                 all([(self.buttons[row][col].is_clicked or self.buttons[row][col].is_mine) for row in range(1, self.ROWS+1) for col in range(1, self.COLS+1)]):
-            messagebox.showinfo('Finish', f'You won in {self.label_time["text"][7:]} seconds!')
+            game_time = self.label_time["text"][7:]
+            self.label_time.destroy()
+            self.label_mines_unmarked.destroy()
+            messagebox.showinfo('Finish', f'You won in {game_time} seconds!')
 
     def create_field(self):
         menubar = tk.Menu(self.window)
@@ -308,15 +317,20 @@ class MineSweeper:
                             cells_to_open.append(btn)
                     
                 cell.is_clicked = True
-                        
-                cell.config(state=tk.DISABLED, 
-                            background='#b5b3b3', disabledforeground=COLORS.get(cell.bombs_around) or 'black', 
-                            relief=tk.SUNKEN)
+
+                if not cell.has_flag:    
+                    cell.config(state=tk.DISABLED, 
+                                background='#b5b3b3', disabledforeground=COLORS.get(cell.bombs_around) or 'black', 
+                                relief=tk.SUNKEN)
                 
         # win msg
         if self.real_mines_marked == self.MINES and\
             all([(self.buttons[row][col].is_clicked or self.buttons[row][col].is_mine) for row in range(1, self.ROWS+1) for col in range(1, self.COLS+1)]):
-            messagebox.showinfo('Finish', f'You won in {self.label_time["text"][7:]} seconds!')
+            game_time = self.label_time["text"][7:]
+            self.label_time.destroy()
+            self.label_mines_unmarked.destroy()
+            messagebox.showinfo('Finish', f'You won in {game_time} seconds!')
+            
 
         
 game = MineSweeper()
